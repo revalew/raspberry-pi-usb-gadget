@@ -435,7 +435,7 @@ ssh pi@10.55.0.1
 
 <br/>
 
-## Windows - configured through control panel.
+## Windows - configured through control panel
 
 > [!WARNING]
 > DID NOT TEST, BUT WAS WORKING FINE WITH RPi4 AS USB GADGET SOME TIME AGO!
@@ -477,7 +477,7 @@ To enable Internet Connection Sharing in Windows 10, follow the steps below:
 <hr/>
 <br/>
 
-#### Linux machine:
+#### Linux PC
 
 <hr/>
 
@@ -621,10 +621,24 @@ nft -s list ruleset >> /etc/my_nftables.conf && nft flush ruleset && nft -f /etc
 ```
 
 </li>
+<li> Restart the NetworkManager service
+
+```bash
+systemctl restart NetworkManager
+```
+
+</li>
+<li> Chceck if the NetworkManager service is working
+
+```bash
+systemctl status NetworkManager
+```
+
+</li>
 </ol>
 <br/>
 
-#### On RPi:
+#### Raspberry Pi
 
 <hr/>
 
@@ -683,7 +697,7 @@ nmcli connection modify bridge-br0 ipv4.dns "8.8.8.8 8.8.4.4"
 <hr/>
 
 > [!TIP]
-> IP addresses are separated by space.
+> IP addresses are separated by space. More info [here](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/networking_guide/sec-configuring_ip_networking_with_nmcli#sec-Adding_and_Configuring_a_Static_Ethernet_Connection_with_nmcli).
 
 <hr/>
 <br/>
@@ -711,8 +725,9 @@ cat /etc/resolv.conf
 </li>
 </ol>
 <br/>
+<br/>
 
-## BASED ON:
+## SOURCES
 
 [https://blog.hardill.me.uk/2023/12/23/pi5-usb -c-gadget/](https://blog.hardill.me.uk/2023/12/23/pi5-usb-c-gadget/)
 
@@ -723,3 +738,7 @@ cat /etc/resolv.conf
 [https://wiki.nftables.org/wiki-nftables/index.php/Performing*Network_Address_Translation*(NAT)](<https://wiki.nftables.org/wiki-nftables/index.php/Performing_Network_Address_Translation_(NAT)>)
 
 [https://wiki.archlinux.org/title/Nftables](https://wiki.archlinux.org/title/Nftables)
+
+[https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/networking_guide/sec-configuring_ip_networking_with_nmcli#sec-Adding_and_Configuring_a_Static_Ethernet_Connection_with_nmcli](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/7/html/networking_guide/sec-configuring_ip_networking_with_nmcli#sec-Adding_and_Configuring_a_Static_Ethernet_Connection_with_nmcli)
+
+[https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-static-routes_configuring-and-managing-networking#configuring-a-static-route-by-using-nmcli_configuring-static-routes](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-static-routes_configuring-and-managing-networking#configuring-a-static-route-by-using-nmcli_configuring-static-routes)    
