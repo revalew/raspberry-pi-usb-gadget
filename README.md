@@ -2,6 +2,8 @@
 
 I had a lot of problems configuring everything, so I hope that if anyone happens to find this, it will prove useful. This guide is for my future reference. Everything worked fine for me, but your mileage may vary.
 
+<hr/>
+   
 > [!TIP]
 > Perform all the operations as a `root`, so you will not be forced to use `sudo` and authenticate all the time.
 
@@ -10,269 +12,461 @@ I had a lot of problems configuring everything, so I hope that if anyone happens
 >
 > I chose nano because vi was reading some funny inputs when I was navigating the files.
 
+<hr/>
+<br/>
+
 ## Update the system
 
-`apt-get update -y`
+<ol>
+<li> Check for updates
 
-`apt-get upgrade -y`
+```bash
+apt-get update -y
+```
+
+</li>
+<li> Download and apply the updates
+
+```basha
+pt-get upgrade -y
+```
+
+</li>
+</ol>
+<br/>
 
 ## IF REQUIRED - UPDATE THE FIRMWARE, BEAR IN MIND IT IS RISKY
 
-`rpi-update`
+<ol>
+   <li> Run the firmware update
+
+```bash
+rpi-update
+```
+
+   </li>
+</ol>
+<br/>
 
 ## Add kernel entries
 
-1. Edit the `config.txt`
+<ol>
+  <li> Edit the <code>config.txt</code>
+    <ul><li>
+   
+```bash
+nano /boot/firmware/config.txt
+```
 
-   - `nano /boot/firmware/config.txt`
+  </li>
+  <li> Add this code at the end of the file
 
-   - Add this code at the end of the file
+```bash
+[all]
+# allowing the usb devices to draw more current, useful for LCD touchscreen
+max_usb_current=1
+# good measure to enable HDMI hot-plugging
+hdmi_force_hotplug=1
+# enable the USB functionality
+dtoverlay=dwc2
+```
 
-     ```bash
-     [all]
-     # allowing the usb devices to draw more current, useful for LCD touchscreen
-     max_usb_current=1
-     # good measure to enable HDMI hot-plugging
-     hdmi_force_hotplug=1
-     # enable the USB functionality
-     dtoverlay=dwc2
-     ```
+  </li></ul>
 
-2. Edit the `cmdline.txt`
+  <li> Edit the <code>cmdline.txt</code>
+    <ul><li>
 
-   - `nano /boot/firmware/cmdline.txt`
+```bash
+nano /boot/firmware/cmdline.txt
+```
 
-   - Add this entry at the end of line
+  </li>
+  <li> Add this entry at the end of line
 
-     > [!CAUTION]
-     > DON'T ADD NEW LINES!!!
-     >
-     > Everything has to be in one line!
+```bash
+modules-load=dwc2
+```
 
-     `modules-load=dwc2`
+  </li>
+  
+  </ul>
+</li>
+<br/>
+<hr/>
 
-3. Edit the list of modules
+> [!CAUTION]
+> DON'T ADD NEW LINES!!!
+>
+> Everything has to be in one line!
 
-   - `nano /etc/modules`
+<hr/>
+<br/>
 
-   - Add this at the end of file
+<li> Edit the list of modules
+  <ul>
 
-     `libcomposite`
+   <li>
+   
+```bash
+nano /etc/modules
+```
+
+  </li>
+   <li> Add this at the end of file
+
+```bash
+libcomposite
+```
+
+  </li>
+  </ul>
+</li>
+</ol>
+<br/>
 
 ## Create new USB Ethernet interfaces
 
 Two new interfaces are created (usb0 & usb1) to include both ECM and RNDIS Ethernet devices, so it will work with Linux, macOS, and Windows without the need to install any extra drivers.
 
+<hr/>
+
 > [!IMPORTANT]
 > Don't forget to make it executable, otherwise it won't work!
 
-1. Create the config file
+<hr/>
+<br/>
+<ol>
 
-   `nano /usr/local/sbin/usb-gadget.sh`
+<li> Create the config file
 
-2. Paste the following script and save
+```bash
+nano /usr/local/sbin/usb-gadget.sh
+```
 
-   ```bash
-   #!/bin/bash
+</li>
+<li> Paste the following script and save
 
-   cd /sys/kernel/config/usb_gadget/
-   mkdir -p display-pi
-   cd display-pi
-   echo 0x1d6b > idVendor # Linux Foundation
-   echo 0x0104 > idProduct # Multifunction Composite Gadget
-   echo 0x0103 > bcdDevice # v1.0.3
-   echo 0x0320 > bcdUSB # USB2
-   echo 2 > bDeviceClass
-   mkdir -p strings/0x409
-   echo "fedcba9876543213" > strings/0x409/serialnumber
-   echo "Ben Hardill" > strings/0x409/manufacturer
-   echo "Display-Pi USB Device" > strings/0x409/product
-   mkdir -p configs/c.1/strings/0x409
-   echo "CDC" > configs/c.1/strings/0x409/configuration
-   echo 250 > configs/c.1/MaxPower
-   echo 0x80 > configs/c.1/bmAttributes
+```bash
+#!/bin/bash
 
-   #ECM
-   mkdir -p functions/ecm.usb0
-   HOST="00:dc:c8:f7:75:15" # "HostPC"
-   SELF="00:dd:dc:eb:6d:a1" # "BadUSB"
-   echo $HOST > functions/ecm.usb0/host_addr
-   echo $SELF > functions/ecm.usb0/dev_addr
-   ln -s functions/ecm.usb0 configs/c.1/
+cd /sys/kernel/config/usb_gadget/
+mkdir -p display-pi
+cd display-pi
+echo 0x1d6b > idVendor # Linux Foundation
+echo 0x0104 > idProduct # Multifunction Composite Gadget
+echo 0x0103 > bcdDevice # v1.0.3
+echo 0x0320 > bcdUSB # USB2
+echo 2 > bDeviceClass
+mkdir -p strings/0x409
+echo "fedcba9876543213" > strings/0x409/serialnumber
+echo "Ben Hardill" > strings/0x409/manufacturer
+echo "Display-Pi USB Device" > strings/0x409/product
+mkdir -p configs/c.1/strings/0x409
+echo "CDC" > configs/c.1/strings/0x409/configuration
+echo 250 > configs/c.1/MaxPower
+echo 0x80 > configs/c.1/bmAttributes
 
-   #
-   mkdir -p configs/c.2
-   echo 0x80 > configs/c.2/bmAttributes
-   echo 0x250 > configs/c.2/MaxPower
-   mkdir -p configs/c.2/strings/0x409
-   echo "RNDIS" > configs/c.2/strings/0x409/configuration
+#ECM
+mkdir -p functions/ecm.usb0
+HOST="00:dc:c8:f7:75:15" # "HostPC"
+SELF="00:dd:dc:eb:6d:a1" # "BadUSB"
+echo $HOST > functions/ecm.usb0/host_addr
+echo $SELF > functions/ecm.usb0/dev_addr
+ln -s functions/ecm.usb0 configs/c.1/
 
-   echo "1" > os_desc/use
-   echo "0xcd" > os_desc/b_vendor_code
-   echo "MSFT100" > os_desc/qw_sign
+#
+mkdir -p configs/c.2
+echo 0x80 > configs/c.2/bmAttributes
+echo 0x250 > configs/c.2/MaxPower
+mkdir -p configs/c.2/strings/0x409
+echo "RNDIS" > configs/c.2/strings/0x409/configuration
 
-   mkdir -p functions/rndis.usb0
-   HOST_R="00:dc:c8:f7:75:16"
-   SELF_R="00:dd:dc:eb:6d:a2"
-   echo $HOST_R > functions/rndis.usb0/dev_addr
-   echo $SELF_R > functions/rndis.usb0/host_addr
-   echo "RNDIS" >   functions/rndis.usb0/os_desc/interface.rndis/compatible_id
-   echo "5162001" > functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id
+echo "1" > os_desc/use
+echo "0xcd" > os_desc/b_vendor_code
+echo "MSFT100" > os_desc/qw_sign
 
-   ln -s functions/rndis.usb0 configs/c.2
-   ln -s configs/c.2 os_desc
+mkdir -p functions/rndis.usb0
+HOST_R="00:dc:c8:f7:75:16"
+SELF_R="00:dd:dc:eb:6d:a2"
+echo $HOST_R > functions/rndis.usb0/dev_addr
+echo $SELF_R > functions/rndis.usb0/host_addr
+echo "RNDIS" >   functions/rndis.usb0/os_desc/interface.rndis/compatible_id
+echo "5162001" > functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id
 
-   udevadm settle -t 5 || :
-   ls /sys/class/udc > UDC
+ln -s functions/rndis.usb0 configs/c.2
+ln -s configs/c.2 os_desc
 
-   sleep 5
+udevadm settle -t 5 || :
+ls /sys/class/udc > UDC
 
-   nmcli connection up bridge-br0
-   nmcli connection up bridge-slave-usb0
-   nmcli connection up bridge-slave-usb1
-   sleep 5
-   service dnsmasq restart
-   ```
+sleep 5
 
-3. Make the script executable
+nmcli connection up bridge-br0
+nmcli connection up bridge-slave-usb0
+nmcli connection up bridge-slave-usb1
+sleep 5
+service dnsmasq restart
+```
 
-   `chmod +x /usr/local/sbin/usb-gadget.sh`
+</li>
+<li> Make the script executable
+
+```bash
+chmod +x /usr/local/sbin/usb-gadget.sh
+```
+
+</li>
+</ol>
+<br/>
 
 ## Create a systemd service and enable it
 
-1. Create the file
+<ol>
 
-   `nano /lib/systemd/system/usbgadget.service`
+<li> Create the file
 
-2. Paste the following script and save
+```bash
+nano /lib/systemd/system/usbgadget.service
+```
 
-   ```bash
-   [Unit]
-   Description=My USB gadget
-   After=network-online.target
-   Wants=network-online.target
-   #After=systemd-modules-load.service
+</li>
+<li> Paste the following script and save
 
-   [Service]
-   Type=oneshot
-   RemainAfterExit=yes
-   ExecStart=/usr/local/sbin/usb-gadget.sh
+```bash
+[Unit]
+Description=My USB gadget
+After=network-online.target
+Wants=network-online.target
+#After=systemd-modules-load.service
 
-   [Install]
-   WantedBy=sysinit.target
-   ```
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/usb-gadget.sh
 
-3. Reload the services (not necessary)
+[Install]
+WantedBy=sysinit.target
+```
 
-   `systemctl daemon-reload`
+</li>
+<li> Reload the services (not necessary)
 
-4. Enable the service
+```bash
+systemctl daemon-reload
+```
 
-   `systemctl enable usbgadget.service`
+</li>
+<li> Enable the service
+
+```bash
+systemctl enable usbgadget.service
+```
+
+</li>
+</ol>
+<br/>
 
 ## Create a bridge interface
 
 We create this bridge to combine both the ECM and the RNDIS driver and share the same IP address
 
-1. Create the main bridge
+<ol>
 
-   `nmcli con add type bridge ifname br0`
+<li> Create the main bridge
 
-2. Create the slave interface for ECM
+```bash
+nmcli con add type bridge ifname br0
+```
 
-   `nmcli con add type bridge-slave ifname usb0 master br0`
+</li>
+<li> Create the slave interface for ECM
 
-3. Create the slave interface for RNDIS
+```bash
+nmcli con add type bridge-slave ifname usb0 master br0
+```
 
-   `nmcli con add type bridge-slave ifname usb1 master br0`
+</li>
+<li> Create the slave interface for RNDIS
 
-4. Configure the IP address of the USB gadget
+```bash
+nmcli con add type bridge-slave ifname usb1 master br0
+```
 
-   > [!IMPORTANT]
-   > IP ADDRES CAN BE CHANGED, JUST REMEMBER TO ALSO CHANGE IT IN DNSMASQ CONFIG LATER!
+</li>
+<li> Configure the IP address of the USB gadget
 
-   `nmcli connection modify bridge-br0 ipv4.method manual ipv4.addresses 10.55.0.1/24`
+```bash
+nmcli connection modify bridge-br0 ipv4.method manual ipv4.addresses 10.55.0.1/24
+```
 
-## INSTALL AND CONFIGURE THE DNSMASQ
+</li>
+<br/>
+<hr/>
 
-1. Install dnsmasq
+> [!IMPORTANT]
+> IP ADDRES CAN BE CHANGED, JUST REMEMBER TO ALSO CHANGE IT IN DNSMASQ CONFIG LATER!
 
-   `apt-get install dnsmasq`
+<hr/>
+</ol>
+<br/>
 
-2. Create the DNS config for interface `br0`
+## Install and configure the DNSMASQ
 
-   `nano /etc/dnsmasq.d/br0`
+<ol>
 
-3. Paste the following script and save
+<li> Install dnsmasq
 
-   > [!IMPORTANT]
-   > IF YOU CHANGED THE IP IN THE PREVIOUS STEP, ADJUST THE RANGE ACCORDINGLY!
+```bash
+apt-get install dnsmasq
+```
 
-   ```bash
-   dhcp-authoritative
-   dhcp-rapid-commit
-   no-ping
-   interface=br0
-   dhcp-range=10.55.0.2,10.55.0.6,255.255.255.248,1h
-   dhcp-option=3
-   leasefile-ro
-   ```
+</li>
+<li> Create the DNS config for interface <code>br0</code>
 
-## REBOOT THE RASPBERRY AND TEST
+```bash
+nano /etc/dnsmasq.d/br0
+```
 
-1. Restart RPi
+</li>
+<li> Paste the following script and save
 
-   - If the raspberry is already powered by the USB cable connected to the PC
+```bash
+dhcp-authoritative
+dhcp-rapid-commit
+no-ping
+interface=br0
+dhcp-range=10.55.0.2,10.55.0.6,255.255.255.248,1h
+dhcp-option=3
+leasefile-ro
+```
 
-     `systemctl reboot`.
+</li>
+<br/>
+<hr/>
 
-   - If the raspberry is connected to the power supply
+> [!IMPORTANT]
+> IF YOU CHANGED THE IP IN THE PREVIOUS STEP, ADJUST THE RANGE ACCORDINGLY!
 
-     `shutdown now`
+<hr/>
+<br/>
+</ol>
 
-     then connect it to the PC using a USB cable.
+## Reboot the raspberry and test
 
-2. Momentarily turn off the Wi-Fi on the PC to see if the USB connection is working
+<ol>
 
-3. Open a terminal and try ping
+<li> Restart RPi
+<ul>
+   <li> If the raspberry is already powered by the USB cable connected to the PC
 
-   - `ping raspberrypi.local`
+```bash
+systemctl reboot
+```
 
-   - `ping 10.55.0.1` (or whatever IP you chose in the previous steps)
+</li>
+   <li> If the raspberry is connected to the power supply
 
-4. If ping worked fine, try SSH (remember to use a proper username, e.g. `pi`)
+```bash
+shutdown now
+```
 
-   - `ssh pi@raspberrypi.local`
+then connect it to the PC using a USB cable.
 
-   - `ssh pi@10.55.0.1` (or whatever IP you chose in the previous steps)
+</li>
+</ul>
+</li>
+<li> Momentarily turn off the Wi-Fi on the PC to see if the USB connection is working
+
+</li>
+<li> Open a terminal and try ping
+<ul>
+   <li>
+   
+```bash
+ping raspberrypi.local
+```
+
+</li>
+   <li>
+   
+```bash
+ping 10.55.0.1
+```
+(or whatever IP you chose in the previous steps)
+
+</li>
+</ul>
+</li>
+<br/>
+<hr/>
+
+> [!NOTE]
+> I'm assuming here that the hostname of the raspberry is set to `raspberrypi`
+
+<hr/>
+<br/>
+<li> If ping worked fine, try SSH (remember to use a proper username, e.g. <code>pi</code>)
+<ul>
+   <li>
+
+```bash
+ssh pi@raspberrypi.local
+```
+
+</li>
+   <li>
+
+```bash
+ssh pi@10.55.0.1
+```
+
+(or whatever IP you chose in the previous steps)
+
+</li>
+</ul>
+</li>
+</ol>
+<br/>
+<br/>
+<br/>
+<br/>
 
 # Add routing from the RPi to the internet through a shared USB connection
+
+<br/>
 
 ## Windows - configured through control panel.
 
 > [!WARNING]
 > DID NOT TEST, BUT WAS WORKING FINE WITH RPi4 AS USB GADGET SOME TIME AGO!
 
+<hr/>
+<br/>
+
 To enable Internet Connection Sharing in Windows 10, follow the steps below:
 
-1. Press Windows key + X to open the Power User menu and select Network Connections.
+<ol>
 
-2. Right-click the network adapter with an Internet connection (Ethernet or wireless network adapter), then select Properties.
+<li> Press Windows key + X to open the Power User menu and select Network Connections. </li>
 
-3. Click Sharing.
+<li> Right-click the network adapter with an Internet connection (Ethernet or wireless network adapter), then select Properties. </li>
 
-4. Put a check mark on Allow other network users to connect through this computer’s Internet connection.
+<li> Click Sharing. </li>
 
-5. From the Home networking connection drop-down menu, select the adapter with internet connection.
+<li> Put a check mark on Allow other network users to connect through this computer’s Internet connection. </li>
 
-6. Click OK to finish.
+<li> From the Home networking connection drop-down menu, select the adapter with internet connection. </li>
+
+<li> Click OK to finish. </li>
+
+</ol>
+<br/>
 
 ## Linux - oh boy...
 
 > [!IMPORTANT]
 > This setup is much more complicated, but I tested it several times, and it worked every time.
-
-> [!IMPORTANT]
+>
 > This instruction assumes that both systems are managed by NetworkManager (Fedora 40 KDE and Raspberry Pi OS Bookworm in my case).
 
 > [!NOTE]
@@ -280,151 +474,243 @@ To enable Internet Connection Sharing in Windows 10, follow the steps below:
 >
 > I chose nano on both machines because vi was reading some funny inputs when I was navigating the files.
 
-1.  Linux machine:
+<hr/>
+<br/>
 
-    > [!TIP]
-    > Perform all the operations as a `root`, so you will not be forced to use `sudo` and authenticate all the time.
+#### Linux machine:
 
-    - Create default config file for nftables
+<hr/>
 
-      `nano /etc/nftables.conf`
+> [!TIP]
+> Perform all the operations as a `root`, so you will not be forced to use `sudo` and authenticate all the time.
 
-    - Paste the following script and save
+<hr/>
+<br/>
+<ol>
 
-      ```bash
-      #!/usr/bin/nft -f
-      # vim:set ts=2 sw=2 et:
+<li> Create default config file for nftables
 
-      # IPv4/IPv6 Simple & Safe firewall ruleset.
-      # More examples in /usr/share/nftables/ and /usr/share/doc/nftables/examples/.
+```bash
+nano /etc/nftables.conf
+```
 
-      destroy table inet filter
-      table inet filter {
-          chain input {
-              type filter hook input priority filter
-              policy drop
+</li>
+<li> Paste the following script and save
 
-              ct state invalid drop comment "early drop of invalid connections"
-              ct state { established, related } accept comment "allow tracked connections"
-              iif lo accept comment "allow from loopback"
-              ip protocol icmp accept comment "allow icmp"
-              meta l4proto ipv6-icmp accept comment "allow icmp v6"
-              tcp dport ssh accept comment "allow sshd"
-              pkttype host limit rate 5/second counter reject with icmpx type admin-prohibited
-              counter
-          }
-          chain forward {
-              type filter hook forward priority filter
-              policy drop
-          }
-      }
-      ```
+```bash
+#!/usr/bin/nft -f
+# vim:set ts=2 sw=2 et:
 
-    - Delete all of the rules
+# IPv4/IPv6 Simple & Safe firewall ruleset.
+# More examples in /usr/share/nftables/ and /usr/share/doc/nftables/examples/.
 
-      `nft flush ruleset`
+destroy table inet filter
+table inet filter {
+    chain input {
+        type filter hook input priority filter
+        policy drop
 
-    - Verify that the list is empty
+        ct state invalid drop comment "early drop of invalid connections"
+        ct state { established, related } accept comment "allow tracked connections"
+        iif lo accept comment "allow from loopback"
+        ip protocol icmp accept comment "allow icmp"
+        meta l4proto ipv6-icmp accept comment "allow icmp v6"
+        tcp dport ssh accept comment "allow sshd"
+        pkttype host limit rate 5/second counter reject with icmpx type admin-prohibited
+        counter
+    }
+    chain forward {
+        type filter hook forward priority filter
+        policy drop
+    }
+}
+```
 
-      `nft list ruleset`
+</li>
+<li> Delete all of the rules
 
-    - Restore the default config from file you just created
+```bash
+nft flush ruleset
+```
 
-      `nft -f /etc/nftables.conf`
+</li>
+<li> Verify that the list is empty
 
-    - Verify that the rules were added
+```bash
+nft list ruleset
+```
 
-      `nft list ruleset`
+</li>
+<li> Restore the default config from file you just created
 
-    - Create a new table for NAT
+```bash
+nft -f /etc/nftables.conf
+```
 
-      `nft add table inet nat`
+</li>
+<li> Verify that the rules were added
 
-    - Create "postrouting chain"
+```bash
+nft list ruleset
+```
 
-      `nft add chain inet nat postrouting '{ type nat hook postrouting priority 100 ; }'`
+</li>
+<li> Create a new table for NAT
 
-    - Check the names of the interfaces
+```bash
+nft add table inet nat
+```
 
-      `ifconfig`
+</li>
+<li> Create "postrouting chain"
 
-      > [!NOTE]
-      > e.g. in my case `enp7s0f3u2` is the interface of the raspberry connected via USB;
-      >
-      > `wlo1` is the Wi-Fi interface with internet access which I want to share.
+```bash
+nft add chain inet nat postrouting '{ type nat hook postrouting priority 100 ; }'
+```
 
-    - Masquerade the enp7s0f3u2 addresses for wlo1
+</li>
+<li> Check the names of the interfaces
 
-      `nft add rule inet nat postrouting oifname wlo1 masquerade`
+```bash
+ifconfig
+```
 
-      > [!NOTE]
-      > `enp7s0f3u2` is the interface of the raspberry;
-      >
-      > `wlo1` is the interface with internet access.
+</li>
+<br/>
+<hr/>
 
-    - Allow forwarding NAT traffic (default policy of the 'filter' table's 'forward' chain is set to 'drop'):
+> [!NOTE]
+> Change your interfaces accordingly
+>
+> e.g. in my case `enp7s0f3u2` is the interface of the raspberry connected via USB;
+>
+> `wlo1` is the Wi-Fi interface with internet access which I want to share.
 
-      - `nft add rule inet filter forward ct state related,established accept`
+<hr/>
+<br/>
 
-      - `nft add rule inet filter forward iifname enp7s0f3u2 oifname wlo1 accept`
+<li> Masquerade the enp7s0f3u2 addresses for wlo1
 
-      > [!NOTE]
-      > AGAIN `enp7s0f3u2` is the interface of the raspberry;
-      >
-      > `wlo1` is the interface with internet access.
+```bash
+nft add rule inet nat postrouting oifname wlo1 masquerade
+```
 
-    - Backup the config, read the backup and verify the ruleset
+</li>
+<li> Allow forwarding NAT traffic (default policy of the 'filter' table's 'forward' chain is set to 'drop'):
+<ul>
+    <li>
+    
+```bash
+nft add rule inet filter forward ct state related,established accept
+```
 
-      `nft -s list ruleset >> /etc/my_nftables.conf && nft flush ruleset && nft -f /etc/my_nftables.conf && nft list ruleset`
+</li>
+    <li>
+    
+```bash
+nft add rule inet filter forward iifname enp7s0f3u2 oifname wlo1 accept
+```
 
-2.  On RPi:
+</li>
+</ul>
+</li>
+<li> Backup the config, read the backup and verify the ruleset
 
-    > [!TIP]
-    > Perform all the operations as a `root`, so you will not be forced to use `sudo` and authenticate all the time.
+```bash
+nft -s list ruleset >> /etc/my_nftables.conf && nft flush ruleset && nft -f /etc/my_nftables.conf && nft list ruleset
+```
 
-    - Set up the routing:
+</li>
+</ol>
+<br/>
 
-      > [!WARNING]
-      > `bridge-br0` is set by the `usbgadget.service`,
-      >
-      > `10.55.0.6` is the IP my laptop is getting, you may be forced to change that.
+#### On RPi:
 
-      - `nmcli connection modify bridge-br0 ipv4.routes "0.0.0.0/0 10.55.0.6"`
+<hr/>
 
-        which works the same as this command
+> [!TIP]
+> Perform all the operations as a `root`, so you will not be forced to use `sudo` and authenticate all the time.
 
-        `ip route add default via 10.55.0.6 dev br0`
+<hr/>
+<br/>
+<ol>
 
-        > [!NOTE]
-        > The main difference in nmcli command (which is required in our case) is the changes are persistent, so this will work after the reboot.
+<li> Add a default route to PC
 
-        > [!TIP]
-        > Routes are separated by commas. More info [here](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-static-routes_configuring-and-managing-networking#configuring-a-static-route-by-using-nmcli_configuring-static-routes).
+```bash
+nmcli connection modify bridge-br0 ipv4.routes "0.0.0.0/0 10.55.0.6"
+```
 
-      - Verify the rules
+which works the same as this command
 
-        `ip r`
+```bash
+ip route add default via 10.55.0.6 dev br0
+```
 
-    - Set up the DNS:
+</li>
+<br/>
+<hr/>
 
-      - Add public DNS from Google or change it to your needs (I used the private DNS, which is running on my PiHole)
+> [!WARNING]
+> `bridge-br0` is set by the `usbgadget.service`,
+>
+> `10.55.0.6` is the IP my laptop is getting, you may be forced to change that.
 
-        `nmcli connection modify bridge-br0 ipv4.dns "8.8.8.8 8.8.4.4"`
+> [!NOTE]
+> The main difference in nmcli command (which is required in our case) is the changes are persistent, so this will work after the reboot.
 
-        > [!TIP]
-        > IP addresses are separated by space.
+> [!TIP]
+> Routes are separated by commas. More info [here](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/configuring-static-routes_configuring-and-managing-networking#configuring-a-static-route-by-using-nmcli_configuring-static-routes).
 
-      - Restart the service
+<hr/>
+<br/>
 
-        `service NetworkManager restart`
+<li> Verify the rules
 
-      - Enable the connection (not necessary)
+```bash
+ip r
+```
 
-        `nmcli connection up bridge-br0`
+</li>
+<li> Add public DNS from Google or change it to your needs (I used the private DNS, which is running on my PiHole)
 
-      - Verify the rules
+```bash
+nmcli connection modify bridge-br0 ipv4.dns "8.8.8.8 8.8.4.4"
+```
 
-        `cat /etc/resolv.conf`
+</li>
+<br/>
+<hr/>
+
+> [!TIP]
+> IP addresses are separated by space.
+
+<hr/>
+<br/>
+
+<li> Restart the service
+
+```bash
+service NetworkManager restart
+```
+
+</li>
+<li> Enable the connection (not necessary)
+
+```bash
+nmcli connection up bridge-br0
+```
+
+</li>
+<li> Verify the rules
+
+```bash
+cat /etc/resolv.conf
+```
+
+</li>
+</ol>
+<br/>
 
 ## BASED ON:
 
@@ -434,6 +720,6 @@ To enable Internet Connection Sharing in Windows 10, follow the steps below:
 
 [https://wiki.archlinux.org/title/Internet_sharing](https://wiki.archlinux.org/title/Internet_sharing)
 
-[https://wiki.nftables.org/wiki-nftables/index.php/Performing_Network_Address_Translation_(NAT)](https://wiki.nftables.org/wiki-nftables/index.php/Performing_Network_Address_Translation_(NAT))
+[https://wiki.nftables.org/wiki-nftables/index.php/Performing*Network_Address_Translation*(NAT)](<https://wiki.nftables.org/wiki-nftables/index.php/Performing_Network_Address_Translation_(NAT)>)
 
 [https://wiki.archlinux.org/title/Nftables](https://wiki.archlinux.org/title/Nftables)
